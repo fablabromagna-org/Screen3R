@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Screen3R for Windows: sends a Windows screen to Screen3R Viewer on an old Mac.
+       Build:    dotnet publish Windows/Screen3R -c Release -r win-x64
+       Result:   one Screen3R.exe (self-contained: no .NET installation needed). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Builds on Linux/macOS too (CI checks, tests); runs only on Windows. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>Screen3R</AssemblyName>
+    <RootNamespace>Screen3R</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Physical pixels everywhere: capture, pointer and input coordinates must agree. -->
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>../../Icons/host.ico</ApplicationIcon>
+    <Version>0.4.0</Version>
+    <Product>Screen3R</Product>
+    <Description>Use an old Mac as a screen for this PC</Description>
+    <Copyright>Copyright (C) 2026 Screen3R contributors. GNU GPL v3 or later.</Copyright>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- One exe, in two flavours (see .github/workflows/build.yml):
+         - default: self-contained, .NET included (~58 MB), runs on any Windows 10/11;
+         - with -p:SelfContained=false: ~27 MB, needs the .NET 10 Desktop Runtime (or a later
+           one: RollForward=Major). Without it, Windows shows a message with the download link.
+         Not trimmed: Windows Forms and COM interop don't trim safely. -->
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <RollForward>Major</RollForward>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile Condition="'$(SelfContained)' == 'true'">true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="../../Icons/host.ico" LogicalName="Screen3R.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Direct3D 11, DXGI and Media Foundation bindings (MIT). Versions pinned. -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
+    <PackageReference Include="Vortice.MediaFoundation" Version="3.8.3" />
+  </ItemGroup>
+
+</Project>

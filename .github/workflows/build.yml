@@ -1,0 +1,78 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The build needs nothing but read access to the code.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      # Actions pinned to full commit SHAs (tags can be moved).
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5   # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Build both apps
+        run: ./build.sh
+      - name: Checksums
+        run: cd build && shasum -a 256 *.zip | tee SHA256SUMS.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: Screen3R
+          path: |
+            build/*.zip
+            build/SHA256SUMS.txt
+
+  # The Windows sender's protocol code against the Mac apps' C crypto (simulated viewer).
+  interop:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5   # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9   # v4.3.1
+        with:
+          dotnet-version: 10.0.x
+      - name: C crypto self-test, .NET tests, interop with a simulated viewer
+        run: |
+          cc -O2 -I Shared Tests/crypto_test.c Shared/rd_crypto.c -lcrypto -o /tmp/crypto_test && /tmp/crypto_test | tail -1
+          Tests/windows_interop.sh
+
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5   # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9   # v4.3.1
+        with:
+          dotnet-version: 10.0.x
+      - name: Tests
+        run: dotnet run -c Release --project Windows/Screen3R.Tests
+      - name: Build Screen3R for Windows (x64 and ARM64, with and without .NET included)
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content Windows/Screen3R/Screen3R.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          New-Item -ItemType Directory -Force build | Out-Null
+          foreach ($arch in 'x64', 'arm64') {
+            # .NET included (runs everywhere) and without .NET (needs the .NET 10 Desktop Runtime).
+            dotnet publish Windows/Screen3R -c Release -r "win-$arch" -o "publish/$arch"
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            Compress-Archive -Path "publish/$arch/Screen3R.exe", LICENSE, THIRD_PARTY_NOTICES.md -DestinationPath "build/Screen3R-Windows-$arch-$version.zip" -Force
+            dotnet publish Windows/Screen3R -c Release -r "win-$arch" -p:SelfContained=false -o "publish/$arch-fd"
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+            Compress-Archive -Path "publish/$arch-fd/Screen3R.exe", LICENSE, THIRD_PARTY_NOTICES.md -DestinationPath "build/Screen3R-Windows-$arch-$version-needs-dotnet10.zip" -Force
+          }
+          Get-FileHash build/*.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } | Tee-Object build/SHA256SUMS-Windows.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2
+        with:
+          name: Screen3R-Windows
+          path: |
+            build/*.zip
+            build/SHA256SUMS-Windows.txt

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Platform-neutral tests of the Windows sender's protocol code (crypto, framing, mDNS,
+       H.264 conversion). Runs anywhere .NET 10 runs:  dotnet run -c Release
+       Tests/windows_interop.sh also uses it to talk to a simulated viewer built on rd_crypto.c. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../Screen3R/RdCrypto.cs" Link="Shared/RdCrypto.cs" />
+    <Compile Include="../Screen3R/Protocol.cs" Link="Shared/Protocol.cs" />
+    <Compile Include="../Screen3R/PeerConnection.cs" Link="Shared/PeerConnection.cs" />
+    <Compile Include="../Screen3R/Discovery.cs" Link="Shared/Discovery.cs" />
+    <Compile Include="../Screen3R/AnnexB.cs" Link="Shared/AnnexB.cs" />
+    <Compile Include="../Screen3R/KeyMap.cs" Link="Shared/KeyMap.cs" />
+    <Compile Include="../Screen3R/EasterEgg.cs" Link="Shared/EasterEgg.cs" />
+  </ItemGroup>
+
+</Project>
